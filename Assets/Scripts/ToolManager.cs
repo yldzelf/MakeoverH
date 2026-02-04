@@ -13,15 +13,17 @@ public class ToolManager : MonoBehaviour
 {
     public static ToolManager Instance { get; private set; }
 
-    [Header("Hardware Cursor Settings")]
-    public Texture2D defaultCursor;
-    public Texture2D shaverCursor;
-    public Vector2 cursorHotspot = Vector2.zero;
-
-    [Header("Paint Brush UI Cursor")]
-    [Tooltip("UI Image that follows the mouse when paint brush is active")]
+    [Header("UI Cursor Images")]
+    [Tooltip("UI Image for the default hand cursor")]
+    public Image handCursorImage;
+    [Tooltip("UI Image for the shaver cursor")]
+    public Image shaverCursorImage;
+    [Tooltip("UI Image for the paint brush cursor")]
     public Image paintBrushCursorImage;
-    [Tooltip("Offset from mouse position")]
+
+    [Header("Cursor Settings")]
+    public Vector2 handCursorOffset = Vector2.zero;
+    public Vector2 shaverCursorOffset = Vector2.zero;
     public Vector2 paintCursorOffset = Vector2.zero;
 
     [Header("Current State")]
@@ -34,8 +36,11 @@ public class ToolManager : MonoBehaviour
     public event System.Action<ToolType> OnToolChanged;
     public event System.Action<Color> OnPaintColorChanged;
 
-    private Canvas parentCanvas;
+    private RectTransform handCursorRect;
+    private RectTransform shaverCursorRect;
     private RectTransform paintCursorRect;
+    private Image activeCursorImage;
+    private Vector2 activeCursorOffset;
 
     private void Awake()
     {
@@ -46,24 +51,37 @@ public class ToolManager : MonoBehaviour
         }
         Instance = this;
 
+        // Cache RectTransforms and hide all cursors initially
+        if (handCursorImage != null)
+        {
+            handCursorRect = handCursorImage.GetComponent<RectTransform>();
+            handCursorImage.gameObject.SetActive(false);
+        }
+        if (shaverCursorImage != null)
+        {
+            shaverCursorRect = shaverCursorImage.GetComponent<RectTransform>();
+            shaverCursorImage.gameObject.SetActive(false);
+        }
         if (paintBrushCursorImage != null)
         {
             paintCursorRect = paintBrushCursorImage.GetComponent<RectTransform>();
-            parentCanvas = paintBrushCursorImage.GetComponentInParent<Canvas>();
             paintBrushCursorImage.gameObject.SetActive(false);
         }
     }
 
+    private void Start()
+    {
+        // Activate default hand cursor on start
+        UpdateCursor();
+    }
+
     private void Update()
     {
-        // Update paint cursor position to follow mouse
-        if (currentTool == ToolType.PaintBrush && paintBrushCursorImage != null && paintCursorRect != null)
+        // Update active cursor position to follow mouse
+        if (activeCursorImage != null && Mouse.current != null)
         {
-            if (Mouse.current != null)
-            {
-                Vector2 mousePos = Mouse.current.position.ReadValue();
-                paintCursorRect.position = mousePos + paintCursorOffset;
-            }
+            Vector2 mousePos = Mouse.current.position.ReadValue();
+            activeCursorImage.rectTransform.position = mousePos + activeCursorOffset;
         }
     }
 
@@ -110,47 +128,53 @@ public class ToolManager : MonoBehaviour
 
     private void UpdateCursor()
     {
-        // Handle paint brush UI cursor
-        if (paintBrushCursorImage != null)
-        {
-            bool showPaintCursor = currentTool == ToolType.PaintBrush;
-            paintBrushCursorImage.gameObject.SetActive(showPaintCursor);
+        // Hide hardware cursor
+        Cursor.visible = false;
 
-            if (showPaintCursor)
-            {
-                // Hide hardware cursor when using UI cursor
-                Cursor.visible = false;
-                return;
-            }
-        }
+        // Deactivate all UI cursors
+        if (handCursorImage != null) handCursorImage.gameObject.SetActive(false);
+        if (shaverCursorImage != null) shaverCursorImage.gameObject.SetActive(false);
+        if (paintBrushCursorImage != null) paintBrushCursorImage.gameObject.SetActive(false);
 
-        // Show hardware cursor
-        Cursor.visible = true;
-
-        Texture2D cursorTexture = null;
-
+        // Activate the appropriate cursor
         switch (currentTool)
         {
             case ToolType.Shaver:
-                cursorTexture = shaverCursor;
+                if (shaverCursorImage != null)
+                {
+                    shaverCursorImage.gameObject.SetActive(true);
+                    activeCursorImage = shaverCursorImage;
+                    activeCursorOffset = shaverCursorOffset;
+                }
                 break;
-            default:
-                cursorTexture = defaultCursor;
+            case ToolType.PaintBrush:
+                if (paintBrushCursorImage != null)
+                {
+                    paintBrushCursorImage.gameObject.SetActive(true);
+                    activeCursorImage = paintBrushCursorImage;
+                    activeCursorOffset = paintCursorOffset;
+                }
+                break;
+            default: // None - show hand cursor
+                if (handCursorImage != null)
+                {
+                    handCursorImage.gameObject.SetActive(true);
+                    activeCursorImage = handCursorImage;
+                    activeCursorOffset = handCursorOffset;
+                }
                 break;
         }
-
-        Cursor.SetCursor(cursorTexture, cursorHotspot, CursorMode.Auto);
     }
 
     private void OnDisable()
     {
         // Reset cursor when disabled
         Cursor.visible = true;
-        Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
 
-        if (paintBrushCursorImage != null)
-        {
-            paintBrushCursorImage.gameObject.SetActive(false);
-        }
+        if (handCursorImage != null) handCursorImage.gameObject.SetActive(false);
+        if (shaverCursorImage != null) shaverCursorImage.gameObject.SetActive(false);
+        if (paintBrushCursorImage != null) paintBrushCursorImage.gameObject.SetActive(false);
+
+        activeCursorImage = null;
     }
 }
