@@ -1,16 +1,13 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // UI tıklamaları için bu kütüphane ŞART
+using UnityEngine.EventSystems;
 
-// MonoBehaviour yanına virgül koyup IPointerClickHandler ekliyoruz
-public class ShaveablePart : MonoBehaviour, IPointerClickHandler 
+public class ShaveablePart : MonoBehaviour, IPointerClickHandler
 {
-    // Bu fonksiyon UI elemanına (Image) tıklandığında otomatik çalışır
     public void OnPointerClick(PointerEventData eventData)
     {
-        // Manager'a sor: Traş modu açık mı?
-        if (ShavingManager.Instance.isShavingActive)
+        // Check if shaving tool is active via ToolManager
+        if (ShavingManager.Instance != null && ShavingManager.Instance.IsShavingActive)
         {
-            // Evet açık, o zaman bu UI görselini yok et
             Destroy(gameObject);
         }
     }

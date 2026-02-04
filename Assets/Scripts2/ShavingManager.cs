@@ -2,35 +2,89 @@ using UnityEngine;
 
 public class ShavingManager : MonoBehaviour
 {
-    // Diğer scriptlerden buna kolayca ulaşmak için static yapıyoruz
     public static ShavingManager Instance;
-
-    [Header("Ayarlar")]
-    public Texture2D razorCursor; // Jilet imlecini buraya sürükleyeceksin
-    public bool isShavingActive = false; // Traş modu açık mı?
 
     void Awake()
     {
-        // Singleton yapısı
         if (Instance == null) Instance = this;
     }
 
-    // Bu fonksiyonu UI'daki butona bağlayacağız
+    void Start()
+    {
+        // Listen for tool changes to update our state
+        if (ToolManager.Instance != null)
+        {
+            ToolManager.Instance.OnToolChanged += OnToolChanged;
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (ToolManager.Instance != null)
+        {
+            ToolManager.Instance.OnToolChanged -= OnToolChanged;
+        }
+    }
+
+    private void OnToolChanged(ToolType newTool)
+    {
+        // Log state changes for debugging
+        if (newTool == ToolType.Shaver)
+        {
+            Debug.Log("Traş Modu AÇIK");
+        }
+        else if (IsShavingActive)
+        {
+            Debug.Log("Traş Modu KAPALI");
+        }
+    }
+
+    // Property to check if shaving is active (uses ToolManager)
+    public bool IsShavingActive
+    {
+        get
+        {
+            return ToolManager.Instance != null &&
+                   ToolManager.Instance.CurrentTool == ToolType.Shaver;
+        }
+    }
+
+    // Connect this to your UI button
     public void ToggleShavingMode()
     {
-        isShavingActive = !isShavingActive; // Açiksa kapat, kapalıysa aç
-
-        if (isShavingActive)
+        if (ToolManager.Instance == null)
         {
-            // Cursor'ı Jilet yap (Vector2.zero sol üst köşeden tıklar)
-            Cursor.SetCursor(razorCursor, Vector2.zero, CursorMode.Auto);
-            Debug.Log("Traş Modu AÇIK");
+            Debug.LogWarning("ToolManager not found in scene!");
+            return;
+        }
+
+        if (IsShavingActive)
+        {
+            // Turn off shaving
+            ToolManager.Instance.ClearTool();
         }
         else
         {
-            // Cursor'ı normale döndür
-            Cursor.SetCursor(null, Vector2.zero, CursorMode.Auto);
-            Debug.Log("Traş Modu KAPALI");
+            // Turn on shaving (this will cancel any other active tool)
+            ToolManager.Instance.SetShaver();
+        }
+    }
+
+    // Call this to activate shaving directly (non-toggle)
+    public void ActivateShaving()
+    {
+        if (ToolManager.Instance != null)
+        {
+            ToolManager.Instance.SetShaver();
+        }
+    }
+
+    // Call this to deactivate shaving
+    public void DeactivateShaving()
+    {
+        if (ToolManager.Instance != null && IsShavingActive)
+        {
+            ToolManager.Instance.ClearTool();
         }
     }
 }

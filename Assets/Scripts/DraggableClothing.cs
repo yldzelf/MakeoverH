@@ -31,15 +31,22 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
         image = GetComponent<Image>();
         canvas = GetComponentInParent<Canvas>();
         canvasGroup = GetComponent<CanvasGroup>();
-
-        if (image != null)
-        {
-            originalColor = image.color;
-        }
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // Clear any active tool when dragging clothes
+        if (ToolManager.Instance != null)
+        {
+            ToolManager.Instance.ClearTool();
+        }
+
+        // Capture current color before dragging (preserves painted color)
+        if (image != null)
+        {
+            originalColor = image.color;
+        }
+
         startPosition = rectTransform.anchoredPosition;
 
         // Bring to front while dragging
@@ -64,8 +71,8 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
         // Move the UI element with the mouse
         rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
 
-        // Check for valid drop points
-        DropPoint nearestValid = GetNearestValidDropPoint();
+        // Check for valid drop points using mouse position
+        DropPoint nearestValid = GetNearestValidDropPoint(eventData.position);
 
         if (nearestValid != currentHoveredDropPoint)
         {
@@ -99,12 +106,12 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
             image.color = originalColor;
         }
 
-        DropPoint validDropPoint = GetNearestValidDropPoint();
+        DropPoint validDropPoint = GetNearestValidDropPoint(eventData.position);
 
         if (validDropPoint != null && !validDropPoint.IsOccupied)
         {
-            // Snap to drop point
-            rectTransform.anchoredPosition = validDropPoint.GetComponent<RectTransform>().anchoredPosition;
+            // Snap to drop point position
+            rectTransform.position = validDropPoint.GetComponent<RectTransform>().position;
             validDropPoint.Occupy(this);
             equippedDropPoint = validDropPoint;
         }
@@ -122,10 +129,11 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
         }
     }
 
-    private DropPoint GetNearestValidDropPoint()
+    private DropPoint GetNearestValidDropPoint(Vector2 screenPosition)
     {
         DropPoint nearest = null;
         float nearestDistance = float.MaxValue;
+        Camera canvasCamera = canvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : canvas.worldCamera;
 
         foreach (DropPoint dropPoint in acceptableDropPoints)
         {
@@ -134,7 +142,11 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
             RectTransform dropRectTransform = dropPoint.GetComponent<RectTransform>();
             if (dropRectTransform == null) continue;
 
-            float distance = Vector2.Distance(rectTransform.anchoredPosition, dropRectTransform.anchoredPosition);
+            // Convert drop point position to screen coordinates
+            Vector2 dropScreenPos = RectTransformUtility.WorldToScreenPoint(canvasCamera, dropRectTransform.position);
+
+            // Compare mouse position to drop point in screen space
+            float distance = Vector2.Distance(screenPosition, dropScreenPos);
 
             if (distance <= dropPoint.snapRadius && distance < nearestDistance)
             {
