@@ -1278,7 +1278,7 @@ GameObject:
   - component: {fileID: 502477941}
   - component: {fileID: 502477943}
   m_Layer: 5
-  m_Name: Brush
+  m_Name: Hand
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
