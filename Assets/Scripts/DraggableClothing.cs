@@ -17,6 +17,7 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
     public Color invalidDropColor = new Color(1f, 0.5f, 0.5f, 0.7f);
 
     private Vector3 startPosition;
+    private Vector2 dragOffset;
     private RectTransform rectTransform;
     private Canvas canvas;
     private Image image;
@@ -49,6 +50,10 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
         startPosition = rectTransform.anchoredPosition;
 
+        // Calculate offset between object and mouse position
+        Vector2 mousePos = eventData.position;
+        dragOffset = (Vector2)rectTransform.position - mousePos;
+
         // Bring to front while dragging
         transform.SetAsLastSibling();
 
@@ -68,8 +73,8 @@ public class DraggableClothing : MonoBehaviour, IBeginDragHandler, IDragHandler,
 
     public void OnDrag(PointerEventData eventData)
     {
-        // Move the UI element with the mouse
-        rectTransform.anchoredPosition += eventData.delta / canvas.scaleFactor;
+        // Move the UI element to follow the mouse exactly (using absolute position)
+        rectTransform.position = eventData.position + dragOffset;
 
         // Check for valid drop points using mouse position
         DropPoint nearestValid = GetNearestValidDropPoint(eventData.position);
